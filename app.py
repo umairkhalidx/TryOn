@@ -1,10 +1,12 @@
 from flask import Flask, request, jsonify, send_file, make_response
+from flask_cors import CORS  # ✅ Import CORS
 import cv2
 import mediapipe as mp
 import numpy as np
 import io
 
 app = Flask(__name__)
+CORS(app)  # ✅ Allow all origins (you can also specify origins=["*"] if needed)
 
 # ---------- EYELASH DETECTION SETUP ----------
 mp_face_mesh = mp.solutions.face_mesh
