@@ -59,8 +59,8 @@ def get_eye_region_info(landmarks, eye_upper_indices, inner_idx, outer_idx):
     return {'center_x': center_x, 'center_y': center_y, 'width': eye_width}
 
 
-def process_eyelash(image_bytes, eyelash_path, vertical_offset=-10, horizontal_offset=0, size_scale=2.0, height_scale=1.0):
-    """Receives image bytes and eyelash path, returns processed image bytes with adjustments"""
+def process_eyelash(image_bytes, eyelash_path):
+    """Receives image bytes and eyelash path, returns processed image bytes"""
     file_bytes = np.frombuffer(image_bytes, np.uint8)
     img = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
 
@@ -86,18 +86,20 @@ def process_eyelash(image_bytes, eyelash_path, vertical_offset=-10, horizontal_o
         right_info = get_eye_region_info(landmarks, RIGHT_EYE_UPPER, RIGHT_EYE_INNER, RIGHT_EYE_OUTER)
 
         lash_aspect = eyelash_img.shape[1] / eyelash_img.shape[0]
+        vertical_offset = -10
+        width_scale = 2.0
+        height_scale = 1.0
 
-        # Apply adjustments
-        # LEFT EYE
-        lw = int(left_info['width'] * size_scale)
+        # LEFT
+        lw = int(left_info['width'] * width_scale)
         lh = int((lw / lash_aspect) * height_scale)
-        lx = left_info['center_x'] - lw // 2 + horizontal_offset
+        lx = left_info['center_x'] - lw // 2
         ly = left_info['center_y'] + vertical_offset - lh // 2
 
-        # RIGHT EYE
-        rw = int(right_info['width'] * size_scale)
+        # RIGHT
+        rw = int(right_info['width'] * width_scale)
         rh = int((rw / lash_aspect) * height_scale)
-        rx = right_info['center_x'] - rw // 2 - horizontal_offset  # Opposite direction for right eye
+        rx = right_info['center_x'] - rw // 2
         ry = right_info['center_y'] + vertical_offset - rh // 2
 
         # Apply eyelashes
@@ -127,32 +129,9 @@ def upload():
     if choice not in ['1', '2', '3', '4']:
         return jsonify({"error": "Invalid choice. Must be 1, 2, 3, or 4."}), 400
 
-    # Get adjustment parameters with default values
-    vertical_offset = int(request.form.get('vertical_offset', -10))
-    horizontal_offset = int(request.form.get('horizontal_offset', 0))
-    size_scale = float(request.form.get('size_scale', 2.0))
-    height_scale = float(request.form.get('height_scale', 1.0))
-
-    # Validate ranges
-    if not (-50 <= vertical_offset <= 50):
-        return jsonify({"error": "Vertical offset must be between -50 and 50"}), 400
-    if not (-50 <= horizontal_offset <= 50):
-        return jsonify({"error": "Horizontal offset must be between -50 and 50"}), 400
-    if not (0.5 <= size_scale <= 3.0):
-        return jsonify({"error": "Size scale must be between 0.5 and 3.0"}), 400
-    if not (0.5 <= height_scale <= 2.0):
-        return jsonify({"error": "Height scale must be between 0.5 and 2.0"}), 400
-
     eyelash_path = f"eyelashes/L{choice}.png"
     try:
-        result_bytes = process_eyelash(
-            image_file.read(), 
-            eyelash_path, 
-            vertical_offset=vertical_offset,
-            horizontal_offset=horizontal_offset,
-            size_scale=size_scale,
-            height_scale=height_scale
-        )
+        result_bytes = process_eyelash(image_file.read(), eyelash_path)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -160,74 +139,6 @@ def upload():
     response.headers.set('Content-Type', 'image/jpeg')
     response.headers.set('Content-Disposition', 'inline; filename=result.jpg')
     return response
-
-
-@app.route('/adjust', methods=['POST'])
-def adjust_eyelashes():
-    """Alternative endpoint specifically for adjustments"""
-    if 'image' not in request.files:
-        return jsonify({"error": "No image file provided"}), 400
-    
-    data = request.form
-    image_file = request.files['image']
-    
-    # Required parameters
-    choice = data.get('choice', '1')
-    if choice not in ['1', '2', '3', '4']:
-        return jsonify({"error": "Invalid choice. Must be 1, 2, 3, or 4."}), 400
-
-    # Adjustment parameters with defaults
-    vertical_offset = int(data.get('vertical_offset', -10))
-    horizontal_offset = int(data.get('horizontal_offset', 0))
-    size_scale = float(data.get('size_scale', 2.0))
-    height_scale = float(data.get('height_scale', 1.0))
-
-    # Validate ranges
-    if not (-50 <= vertical_offset <= 50):
-        return jsonify({"error": "Vertical offset must be between -50 and 50"}), 400
-    if not (-50 <= horizontal_offset <= 50):
-        return jsonify({"error": "Horizontal offset must be between -50 and 50"}), 400
-    if not (0.5 <= size_scale <= 3.0):
-        return jsonify({"error": "Size scale must be between 0.5 and 3.0"}), 400
-    if not (0.5 <= height_scale <= 2.0):
-        return jsonify({"error": "Height scale must be between 0.5 and 2.0"}), 400
-
-    eyelash_path = f"eyelashes/L{choice}.png"
-    try:
-        result_bytes = process_eyelash(
-            image_file.read(), 
-            eyelash_path, 
-            vertical_offset=vertical_offset,
-            horizontal_offset=horizontal_offset,
-            size_scale=size_scale,
-            height_scale=height_scale
-        )
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-    response = make_response(result_bytes)
-    response.headers.set('Content-Type', 'image/jpeg')
-    response.headers.set('Content-Disposition', 'inline; filename=result.jpg')
-    return response
-
-
-@app.route('/settings', methods=['GET'])
-def get_default_settings():
-    """Endpoint to get default and valid range of settings"""
-    return jsonify({
-        "default_settings": {
-            "vertical_offset": -10,
-            "horizontal_offset": 0,
-            "size_scale": 2.0,
-            "height_scale": 1.0
-        },
-        "valid_ranges": {
-            "vertical_offset": {"min": -50, "max": 50},
-            "horizontal_offset": {"min": -50, "max": 50},
-            "size_scale": {"min": 0.5, "max": 3.0},
-            "height_scale": {"min": 0.5, "max": 2.0}
-        }
-    })
 
 
 if __name__ == '__main__':

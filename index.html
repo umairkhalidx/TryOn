@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eyelash Placement</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #333;
+        }
+        
+        .upload-section {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .file-input {
+            margin: 10px 0;
+        }
+        
+        .style-selection {
+            margin: 15px 0;
+            text-align: center;
+        }
+        
+        .style-btn {
+            padding: 8px 15px;
+            margin: 0 5px;
+            border: 2px solid #ddd;
+            background: white;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        
+        .style-btn.active {
+            border-color: #007bff;
+            background: #007bff;
+            color: white;
+        }
+        
+        .controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .control-group {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+        }
+        
+        .control-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #333;
+        }
+        
+        .position-controls {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 5px;
+        }
+        
+        .control-btn {
+            padding: 10px;
+            border: 1px solid #ddd;
+            background: white;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        .control-btn:hover {
+            background: #e9ecef;
+        }
+        
+        .size-control {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .size-slider {
+            flex: 1;
+        }
+        
+        .size-value {
+            min-width: 40px;
+            text-align: center;
+        }
+        
+        .current-settings {
+            background: #e9ecef;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-size: 14px;
+        }
+        
+        .apply-btn {
+            width: 100%;
+            padding: 12px;
+            background: #28a745;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 10px 0;
+        }
+        
+        .apply-btn:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+        
+        .reset-btn {
+            width: 100%;
+            padding: 10px;
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        
+        .result-section {
+            margin-top: 20px;
+            text-align: center;
+        }
+        
+        .image-container {
+            display: flex;
+            gap: 10px;
+            margin: 15px 0;
+        }
+        
+        .image-box {
+            flex: 1;
+            border: 2px dashed #ddd;
+            border-radius: 5px;
+            min-height: 200px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f8f9fa;
+        }
+        
+        .preview-img {
+            max-width: 100%;
+            max-height: 300px;
+        }
+        
+        .loading {
+            color: #007bff;
+            text-align: center;
+            margin: 10px 0;
+        }
+        
+        .error {
+            color: #dc3545;
+            background: #f8d7da;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            display: none;
+        }
+        
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Eyelash Placement</h1>
+        
+        <div class="upload-section">
+            <input type="file" id="imageInput" accept="image/*" class="file-input">
+            <div id="imagePreview" class="image-box">
+                <span>No image selected</span>
+            </div>
+        </div>
+        
+        <div class="style-selection">
+            <div class="control-title">Eyelash Style</div>
+            <button class="style-btn active" data-style="1">Style 1</button>
+            <button class="style-btn" data-style="2">Style 2</button>
+            <button class="style-btn" data-style="3">Style 3</button>
+            <button class="style-btn" data-style="4">Style 4</button>
+        </div>
+        
+        <div class="controls">
+            <div class="control-group">
+                <div class="control-title">Position</div>
+                <div class="position-controls">
+                    <div></div>
+                    <button class="control-btn" id="upBtn">↑ Up</button>
+                    <div></div>
+                    <button class="control-btn" id="leftBtn">← Left</button>
+                    <button class="control-btn" id="centerBtn">Center</button>
+                    <button class="control-btn" id="rightBtn">→ Right</button>
+                    <div></div>
+                    <button class="control-btn" id="downBtn">↓ Down</button>
+                    <div></div>
+                </div>
+            </div>
+            
+            <div class="control-group">
+                <div class="control-title">Size</div>
+                <div class="size-control">
+                    <button class="control-btn" id="smallerBtn">-</button>
+                    <input type="range" id="sizeSlider" class="size-slider" min="50" max="200" value="100">
+                    <span id="sizeValue" class="size-value">100%</span>
+                    <button class="control-btn" id="largerBtn">+</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="current-settings">
+            <div>Vertical: <span id="verticalValue">-10</span>px</div>
+            <div>Horizontal: <span id="horizontalValue">0</span>px</div>
+            <div>Size Scale: <span id="scaleValue">2.0</span>x</div>
+        </div>
+        
+        <button id="applyBtn" class="apply-btn" disabled>Apply Eyelashes</button>
+        <button id="resetBtn" class="reset-btn">Reset Settings</button>
+        
+        <div class="error" id="errorMessage"></div>
+        <div class="loading hidden" id="loading">Processing...</div>
+        
+        <div class="result-section">
+            <div class="control-title">Result</div>
+            <div id="resultContainer" class="image-box hidden">
+                <img id="resultImage" class="preview-img">
+            </div>
+            <button id="downloadBtn" class="apply-btn hidden">Download Result</button>
+        </div>
+    </div>
+
+    <script>
+        // API Configuration
+        const API_BASE_URL = 'http://localhost:5000';
+        
+        // State
+        let currentSettings = {
+            verticalOffset: -10,
+            horizontalOffset: 0,
+            sizeScale: 2.0,
+            selectedStyle: '1'
+        };
+        
+        // DOM Elements
+        const imageInput = document.getElementById('imageInput');
+        const imagePreview = document.getElementById('imagePreview');
+        const applyBtn = document.getElementById('applyBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const resultImage = document.getElementById('resultImage');
+        const resultContainer = document.getElementById('resultContainer');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const loading = document.getElementById('loading');
+        const errorMessage = document.getElementById('errorMessage');
+        
+        // Control elements
+        const styleBtns = document.querySelectorAll('.style-btn');
+        const upBtn = document.getElementById('upBtn');
+        const downBtn = document.getElementById('downBtn');
+        const leftBtn = document.getElementById('leftBtn');
+        const rightBtn = document.getElementById('rightBtn');
+        const centerBtn = document.getElementById('centerBtn');
+        const smallerBtn = document.getElementById('smallerBtn');
+        const largerBtn = document.getElementById('largerBtn');
+        const sizeSlider = document.getElementById('sizeSlider');
+        
+        // Display elements
+        const verticalValue = document.getElementById('verticalValue');
+        const horizontalValue = document.getElementById('horizontalValue');
+        const scaleValue = document.getElementById('scaleValue');
+        const sizeValue = document.getElementById('sizeValue');
+        
+        // Event Listeners
+        imageInput.addEventListener('change', handleImageUpload);
+        applyBtn.addEventListener('click', applyEyelashes);
+        resetBtn.addEventListener('click', resetSettings);
+        downloadBtn.addEventListener('click', downloadImage);
+        
+        // Style selection
+        styleBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                styleBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentSettings.selectedStyle = btn.dataset.style;
+            });
+        });
+        
+        // Position controls
+        upBtn.addEventListener('click', () => adjustPosition('up'));
+        downBtn.addEventListener('click', () => adjustPosition('down'));
+        leftBtn.addEventListener('click', () => adjustPosition('left'));
+        rightBtn.addEventListener('click', () => adjustPosition('right'));
+        centerBtn.addEventListener('click', resetPosition);
+        
+        // Size controls
+        smallerBtn.addEventListener('click', () => adjustSize('smaller'));
+        largerBtn.addEventListener('click', () => adjustSize('larger'));
+        sizeSlider.addEventListener('input', handleSizeSlider);
+        
+        // Functions
+        function handleImageUpload(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    imagePreview.innerHTML = `<img src="${e.target.result}" class="preview-img">`;
+                    applyBtn.disabled = false;
+                    hideError();
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+        
+        function adjustPosition(direction) {
+            switch(direction) {
+                case 'up':
+                    currentSettings.verticalOffset -= 5;
+                    break;
+                case 'down':
+                    currentSettings.verticalOffset += 5;
+                    break;
+                case 'left':
+                    currentSettings.horizontalOffset -= 5;
+                    break;
+                case 'right':
+                    currentSettings.horizontalOffset += 5;
+                    break;
+            }
+            updateDisplay();
+        }
+        
+        function resetPosition() {
+            currentSettings.verticalOffset = -10;
+            currentSettings.horizontalOffset = 0;
+            updateDisplay();
+        }
+        
+        function adjustSize(change) {
+            if (change === 'smaller') {
+                currentSettings.sizeScale = Math.max(0.5, currentSettings.sizeScale - 0.1);
+            } else {
+                currentSettings.sizeScale = Math.min(3.0, currentSettings.sizeScale + 0.1);
+            }
+            sizeSlider.value = Math.round((currentSettings.sizeScale / 3.0) * 150) + 50;
+            updateDisplay();
+        }
+        
+        function handleSizeSlider(event) {
+            const sliderValue = parseInt(event.target.value);
+            currentSettings.sizeScale = (sliderValue - 50) / 150 * 3.0;
+            updateDisplay();
+        }
+        
+        function updateDisplay() {
+            verticalValue.textContent = currentSettings.verticalOffset;
+            horizontalValue.textContent = currentSettings.horizontalOffset;
+            scaleValue.textContent = currentSettings.sizeScale.toFixed(1);
+            sizeValue.textContent = sizeSlider.value + '%';
+        }
+        
+        async function applyEyelashes() {
+            if (!imageInput.files[0]) {
+                showError('Please select an image first');
+                return;
+            }
+            
+            showLoading();
+            hideError();
+            applyBtn.disabled = true;
+            
+            try {
+                const formData = new FormData();
+                formData.append('image', imageInput.files[0]);
+                formData.append('choice', currentSettings.selectedStyle);
+                formData.append('vertical_offset', currentSettings.verticalOffset);
+                formData.append('horizontal_offset', currentSettings.horizontalOffset);
+                formData.append('size_scale', currentSettings.sizeScale);
+                formData.append('height_scale', 1.0); // Fixed for simplicity
+                
+                const response = await fetch(`${API_BASE_URL}/upload`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+                }
+                
+                const blob = await response.blob();
+                const imageUrl = URL.createObjectURL(blob);
+                
+                resultImage.src = imageUrl;
+                resultContainer.classList.remove('hidden');
+                downloadBtn.classList.remove('hidden');
+                
+            } catch (error) {
+                showError('Error: ' + error.message);
+            } finally {
+                hideLoading();
+                applyBtn.disabled = false;
+            }
+        }
+        
+        function resetSettings() {
+            currentSettings = {
+                verticalOffset: -10,
+                horizontalOffset: 0,
+                sizeScale: 2.0,
+                selectedStyle: '1'
+            };
+            
+            sizeSlider.value = 100;
+            updateDisplay();
+            hideError();
+            
+            // Reset style buttons
+            styleBtns.forEach(btn => btn.classList.remove('active'));
+            document.querySelector('.style-btn[data-style="1"]').classList.add('active');
+        }
+        
+        function downloadImage() {
+            if (resultImage.src) {
+                const link = document.createElement('a');
+                link.download = 'eyelash_result.jpg';
+                link.href = resultImage.src;
+                link.click();
+            }
+        }
+        
+        function showLoading() {
+            loading.classList.remove('hidden');
+        }
+        
+        function hideLoading() {
+            loading.classList.add('hidden');
+        }
+        
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorMessage.style.display = 'block';
+        }
+        
+        function hideError() {
+            errorMessage.style.display = 'none';
+        }
+        
+        // Initialize
+        updateDisplay();
+    </script>
+</body>
+</html>
