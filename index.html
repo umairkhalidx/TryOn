@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Eyelash Placement</title>
+    <title>Eyelash Placement & Recommendation</title>
     <style>
         * {
             margin: 0;
@@ -13,7 +13,7 @@
         
         body {
             font-family: Arial, sans-serif;
-            max-width: 800px;
+            max-width: 1000px;
             margin: 0 auto;
             padding: 20px;
             background-color: #f5f5f5;
@@ -30,6 +30,35 @@
             text-align: center;
             margin-bottom: 20px;
             color: #333;
+        }
+        
+        .tab-container {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            border: none;
+            background: none;
+            font-size: 16px;
+            border-bottom: 3px solid transparent;
+        }
+        
+        .tab.active {
+            border-bottom-color: #007bff;
+            color: #007bff;
+            font-weight: bold;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
         }
         
         .upload-section {
@@ -194,72 +223,186 @@
         .hidden {
             display: none;
         }
+        
+        /* Recommendation Styles */
+        .recommendation-section {
+            margin-top: 20px;
+        }
+        
+        .analysis-results {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .analysis-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+        
+        .analysis-label {
+            font-weight: bold;
+        }
+        
+        .recommendations-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .recommendation-card {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            background: white;
+        }
+        
+        .recommendation-name {
+            font-weight: bold;
+            font-size: 18px;
+            margin-bottom: 5px;
+        }
+        
+        .recommendation-details {
+            margin-bottom: 10px;
+        }
+        
+        .recommendation-detail {
+            display: flex;
+            margin-bottom: 3px;
+        }
+        
+        .detail-label {
+            font-weight: bold;
+            margin-right: 5px;
+            min-width: 70px;
+        }
+        
+        .confidence-bar {
+            height: 10px;
+            background: #e9ecef;
+            border-radius: 5px;
+            margin-top: 5px;
+            overflow: hidden;
+        }
+        
+        .confidence-fill {
+            height: 100%;
+            background: #28a745;
+            border-radius: 5px;
+        }
+        
+        .recommendation-description {
+            font-style: italic;
+            margin-top: 10px;
+            font-size: 14px;
+            color: #666;
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Eyelash Placement</h1>
+        <h1>Eyelash Placement & Recommendation</h1>
         
-        <div class="upload-section">
-            <input type="file" id="imageInput" accept="image/*" class="file-input">
-            <div id="imagePreview" class="image-box">
-                <span>No image selected</span>
-            </div>
+        <div class="tab-container">
+            <button class="tab active" data-tab="try-on">Try On Eyelashes</button>
+            <button class="tab" data-tab="recommendation">Get Recommendations</button>
         </div>
         
-        <div class="style-selection">
-            <div class="control-title">Eyelash Style</div>
-            <button class="style-btn active" data-style="1">Style 1</button>
-            <button class="style-btn" data-style="2">Style 2</button>
-            <button class="style-btn" data-style="3">Style 3</button>
-            <button class="style-btn" data-style="4">Style 4</button>
-        </div>
-        
-        <div class="controls">
-            <div class="control-group">
-                <div class="control-title">Position</div>
-                <div class="position-controls">
-                    <div></div>
-                    <button class="control-btn" id="upBtn">↑ Up</button>
-                    <div></div>
-                    <button class="control-btn" id="leftBtn">← Left</button>
-                    <button class="control-btn" id="centerBtn">Center</button>
-                    <button class="control-btn" id="rightBtn">→ Right</button>
-                    <div></div>
-                    <button class="control-btn" id="downBtn">↓ Down</button>
-                    <div></div>
+        <!-- Try On Eyelashes Tab -->
+        <div class="tab-content active" id="try-on-tab">
+            <div class="upload-section">
+                <input type="file" id="imageInput" accept="image/*" class="file-input">
+                <div id="imagePreview" class="image-box">
+                    <span>No image selected</span>
                 </div>
             </div>
             
-            <div class="control-group">
-                <div class="control-title">Size</div>
-                <div class="size-control">
-                    <button class="control-btn" id="smallerBtn">-</button>
-                    <input type="range" id="sizeSlider" class="size-slider" min="50" max="200" value="100">
-                    <span id="sizeValue" class="size-value">100%</span>
-                    <button class="control-btn" id="largerBtn">+</button>
+            <div class="style-selection">
+                <div class="control-title">Eyelash Style</div>
+                <button class="style-btn active" data-style="1">Style 1</button>
+                <button class="style-btn" data-style="2">Style 2</button>
+                <button class="style-btn" data-style="3">Style 3</button>
+                <button class="style-btn" data-style="4">Style 4</button>
+            </div>
+            
+            <div class="controls">
+                <div class="control-group">
+                    <div class="control-title">Position</div>
+                    <div class="position-controls">
+                        <div></div>
+                        <button class="control-btn" id="upBtn">↑ Up</button>
+                        <div></div>
+                        <button class="control-btn" id="leftBtn">← Left</button>
+                        <button class="control-btn" id="centerBtn">Center</button>
+                        <button class="control-btn" id="rightBtn">→ Right</button>
+                        <div></div>
+                        <button class="control-btn" id="downBtn">↓ Down</button>
+                        <div></div>
+                    </div>
+                </div>
+                
+                <div class="control-group">
+                    <div class="control-title">Size</div>
+                    <div class="size-control">
+                        <button class="control-btn" id="smallerBtn">-</button>
+                        <input type="range" id="sizeSlider" class="size-slider" min="50" max="200" value="100">
+                        <span id="sizeValue" class="size-value">100%</span>
+                        <button class="control-btn" id="largerBtn">+</button>
+                    </div>
                 </div>
             </div>
-        </div>
-        
-        <div class="current-settings">
-            <div>Vertical: <span id="verticalValue">-10</span>px</div>
-            <div>Horizontal: <span id="horizontalValue">0</span>px</div>
-            <div>Size Scale: <span id="scaleValue">2.0</span>x</div>
-        </div>
-        
-        <button id="applyBtn" class="apply-btn" disabled>Apply Eyelashes</button>
-        <button id="resetBtn" class="reset-btn">Reset Settings</button>
-        
-        <div class="error" id="errorMessage"></div>
-        <div class="loading hidden" id="loading">Processing...</div>
-        
-        <div class="result-section">
-            <div class="control-title">Result</div>
-            <div id="resultContainer" class="image-box hidden">
-                <img id="resultImage" class="preview-img">
+            
+            <div class="current-settings">
+                <div>Vertical: <span id="verticalValue">-10</span>px</div>
+                <div>Horizontal: <span id="horizontalValue">0</span>px</div>
+                <div>Size Scale: <span id="scaleValue">2.0</span>x</div>
             </div>
-            <button id="downloadBtn" class="apply-btn hidden">Download Result</button>
+            
+            <button id="applyBtn" class="apply-btn" disabled>Apply Eyelashes</button>
+            <button id="resetBtn" class="reset-btn">Reset Settings</button>
+            
+            <div class="error" id="errorMessage"></div>
+            <div class="loading hidden" id="loading">Processing...</div>
+            
+            <div class="result-section">
+                <div class="control-title">Result</div>
+                <div id="resultContainer" class="image-box hidden">
+                    <img id="resultImage" class="preview-img">
+                </div>
+                <button id="downloadBtn" class="apply-btn hidden">Download Result</button>
+            </div>
+        </div>
+        
+        <!-- Recommendation Tab -->
+        <div class="tab-content" id="recommendation-tab">
+            <div class="upload-section">
+                <input type="file" id="recommendationImageInput" accept="image/*" class="file-input">
+                <div id="recommendationImagePreview" class="image-box">
+                    <span>Upload a photo for eye analysis</span>
+                </div>
+                <button id="analyzeBtn" class="apply-btn" disabled>Analyze & Recommend</button>
+            </div>
+            
+            <div class="error" id="recommendationErrorMessage"></div>
+            <div class="loading hidden" id="recommendationLoading">Analyzing your eyes...</div>
+            
+            <div class="recommendation-section hidden" id="recommendationResults">
+                <div class="analysis-results">
+                    <div class="control-title">Eye Analysis Results</div>
+                    <div id="analysisDetails">
+                        <!-- Analysis results will be populated here -->
+                    </div>
+                </div>
+                
+                <div class="control-title">Recommended Eyelashes</div>
+                <div id="recommendationsList" class="recommendations-grid">
+                    <!-- Recommendations will be populated here -->
+                </div>
+            </div>
         </div>
     </div>
 
@@ -286,6 +429,16 @@
         const loading = document.getElementById('loading');
         const errorMessage = document.getElementById('errorMessage');
         
+        // Recommendation elements
+        const recommendationImageInput = document.getElementById('recommendationImageInput');
+        const recommendationImagePreview = document.getElementById('recommendationImagePreview');
+        const analyzeBtn = document.getElementById('analyzeBtn');
+        const recommendationLoading = document.getElementById('recommendationLoading');
+        const recommendationErrorMessage = document.getElementById('recommendationErrorMessage');
+        const recommendationResults = document.getElementById('recommendationResults');
+        const analysisDetails = document.getElementById('analysisDetails');
+        const recommendationsList = document.getElementById('recommendationsList');
+        
         // Control elements
         const styleBtns = document.querySelectorAll('.style-btn');
         const upBtn = document.getElementById('upBtn');
@@ -303,11 +456,34 @@
         const scaleValue = document.getElementById('scaleValue');
         const sizeValue = document.getElementById('sizeValue');
         
+        // Tab elements
+        const tabs = document.querySelectorAll('.tab');
+        const tabContents = document.querySelectorAll('.tab-content');
+        
         // Event Listeners
         imageInput.addEventListener('change', handleImageUpload);
         applyBtn.addEventListener('click', applyEyelashes);
         resetBtn.addEventListener('click', resetSettings);
         downloadBtn.addEventListener('click', downloadImage);
+        
+        // Recommendation event listeners
+        recommendationImageInput.addEventListener('change', handleRecommendationImageUpload);
+        analyzeBtn.addEventListener('click', analyzeAndRecommend);
+        
+        // Tab switching
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                const tabId = tab.dataset.tab;
+                
+                // Update active tab
+                tabs.forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                
+                // Show corresponding content
+                tabContents.forEach(content => content.classList.remove('active'));
+                document.getElementById(`${tabId}-tab`).classList.add('active');
+            });
+        });
         
         // Style selection
         styleBtns.forEach(btn => {
@@ -339,6 +515,19 @@
                     imagePreview.innerHTML = `<img src="${e.target.result}" class="preview-img">`;
                     applyBtn.disabled = false;
                     hideError();
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+        
+        function handleRecommendationImageUpload(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    recommendationImagePreview.innerHTML = `<img src="${e.target.result}" class="preview-img">`;
+                    analyzeBtn.disabled = false;
+                    hideRecommendationError();
                 };
                 reader.readAsDataURL(file);
             }
@@ -435,6 +624,116 @@
             }
         }
         
+        async function analyzeAndRecommend() {
+            if (!recommendationImageInput.files[0]) {
+                showRecommendationError('Please select an image first');
+                return;
+            }
+            
+            showRecommendationLoading();
+            hideRecommendationError();
+            analyzeBtn.disabled = true;
+            
+            try {
+                const formData = new FormData();
+                formData.append('image', recommendationImageInput.files[0]);
+                
+                const response = await fetch(`${API_BASE_URL}/recommend`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                // Display analysis results
+                displayAnalysisResults(data.analysis);
+                
+                // Display recommendations
+                displayRecommendations(data.recommendations);
+                
+                // Show results section
+                recommendationResults.classList.remove('hidden');
+                
+            } catch (error) {
+                showRecommendationError('Error: ' + error.message);
+            } finally {
+                hideRecommendationLoading();
+                analyzeBtn.disabled = false;
+            }
+        }
+        
+        function displayAnalysisResults(analysis) {
+            analysisDetails.innerHTML = `
+                <div class="analysis-item">
+                    <span class="analysis-label">Eye Size:</span>
+                    <span>${analysis.eye_size}</span>
+                </div>
+                <div class="analysis-item">
+                    <span class="analysis-label">Hooded Eyes:</span>
+                    <span>${analysis.is_hooded ? 'Yes' : 'No'}</span>
+                </div>
+                <div class="analysis-item">
+                    <span class="analysis-label">Eye Width:</span>
+                    <span>${analysis.eye_width} px</span>
+                </div>
+                <div class="analysis-item">
+                    <span class="analysis-label">Eye Height:</span>
+                    <span>${analysis.eye_height} px</span>
+                </div>
+                <div class="analysis-item">
+                    <span class="analysis-label">Aspect Ratio:</span>
+                    <span>${analysis.aspect_ratio}</span>
+                </div>
+            `;
+        }
+        
+        function displayRecommendations(recommendations) {
+            recommendationsList.innerHTML = '';
+            
+            if (recommendations.length === 0) {
+                recommendationsList.innerHTML = '<p>No recommendations found for your eye characteristics.</p>';
+                return;
+            }
+            
+            recommendations.forEach(rec => {
+                const card = document.createElement('div');
+                card.className = 'recommendation-card';
+                
+                card.innerHTML = `
+                    <div class="recommendation-name">${rec.name}</div>
+                    <div class="recommendation-details">
+                        <div class="recommendation-detail">
+                            <span class="detail-label">Style:</span>
+                            <span>${rec.style}</span>
+                        </div>
+                        <div class="recommendation-detail">
+                            <span class="detail-label">Intensity:</span>
+                            <span>${rec.intensity}</span>
+                        </div>
+                        <div class="recommendation-detail">
+                            <span class="detail-label">Look:</span>
+                            <span>${rec.look}</span>
+                        </div>
+                        <div class="recommendation-detail">
+                            <span class="detail-label">Confidence:</span>
+                            <span>${rec.confidence}%</span>
+                        </div>
+                        <div class="confidence-bar">
+                            <div class="confidence-fill" style="width: ${rec.confidence}%"></div>
+                        </div>
+                    </div>
+                    <div class="recommendation-description">${rec.description}</div>
+                `;
+                
+                recommendationsList.appendChild(card);
+            });
+        }
+        
         function resetSettings() {
             currentSettings = {
                 verticalOffset: -10,
@@ -469,6 +768,14 @@
             loading.classList.add('hidden');
         }
         
+        function showRecommendationLoading() {
+            recommendationLoading.classList.remove('hidden');
+        }
+        
+        function hideRecommendationLoading() {
+            recommendationLoading.classList.add('hidden');
+        }
+        
         function showError(message) {
             errorMessage.textContent = message;
             errorMessage.style.display = 'block';
@@ -476,6 +783,15 @@
         
         function hideError() {
             errorMessage.style.display = 'none';
+        }
+        
+        function showRecommendationError(message) {
+            recommendationErrorMessage.textContent = message;
+            recommendationErrorMessage.style.display = 'block';
+        }
+        
+        function hideRecommendationError() {
+            recommendationErrorMessage.style.display = 'none';
         }
         
         // Initialize
