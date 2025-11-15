@@ -77,11 +77,12 @@
         
         .style-btn {
             padding: 8px 15px;
-            margin: 0 5px;
+            margin: 5px;
             border: 2px solid #ddd;
             background: white;
             border-radius: 5px;
             cursor: pointer;
+            font-size: 14px;
         }
         
         .style-btn.active {
@@ -132,6 +133,7 @@
             display: flex;
             align-items: center;
             gap: 10px;
+            margin-bottom: 10px;
         }
         
         .size-slider {
@@ -141,6 +143,33 @@
         .size-value {
             min-width: 40px;
             text-align: center;
+        }
+        
+        .rotation-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 10px;
+        }
+        
+        .rotation-btn {
+            padding: 10px 15px;
+            border: 1px solid #ddd;
+            background: white;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 18px;
+        }
+        
+        .rotation-btn:hover {
+            background: #e9ecef;
+        }
+        
+        .rotation-value {
+            min-width: 60px;
+            text-align: center;
+            font-weight: bold;
         }
         
         .current-settings {
@@ -323,10 +352,15 @@
             
             <div class="style-selection">
                 <div class="control-title">Eyelash Style</div>
-                <button class="style-btn active" data-style="1">Style 1</button>
-                <button class="style-btn" data-style="2">Style 2</button>
-                <button class="style-btn" data-style="3">Style 3</button>
-                <button class="style-btn" data-style="4">Style 4</button>
+                <button class="style-btn active" data-style="Drunk In Love">Drunk In Love</button>
+                <button class="style-btn" data-style="Wedding Day">Wedding Day</button>
+                <button class="style-btn" data-style="Foxy">Foxy</button>
+                <button class="style-btn" data-style="Flare">Flare</button>
+                <button class="style-btn" data-style="Vixen">Vixen</button>
+                <button class="style-btn" data-style="Other Half 1">Other Half 1</button>
+                <button class="style-btn" data-style="Other Half 2">Other Half 2</button>
+                <button class="style-btn" data-style="Staycation">Staycation</button>
+                <button class="style-btn" data-style="Iconic">Iconic</button>
             </div>
             
             <div class="controls">
@@ -353,6 +387,13 @@
                         <span id="sizeValue" class="size-value">100%</span>
                         <button class="control-btn" id="largerBtn">+</button>
                     </div>
+                    
+                    <div class="control-title">Rotation</div>
+                    <div class="rotation-controls">
+                        <button class="rotation-btn" id="rotateLeftBtn">↶</button>
+                        <span id="rotationValue" class="rotation-value">0°</span>
+                        <button class="rotation-btn" id="rotateRightBtn">↷</button>
+                    </div>
                 </div>
             </div>
             
@@ -360,6 +401,7 @@
                 <div>Vertical: <span id="verticalValue">-10</span>px</div>
                 <div>Horizontal: <span id="horizontalValue">0</span>px</div>
                 <div>Size Scale: <span id="scaleValue">2.0</span>x</div>
+                <div>Rotation: <span id="rotationDisplayValue">0</span>°</div>
             </div>
             
             <button id="applyBtn" class="apply-btn" disabled>Apply Eyelashes</button>
@@ -415,7 +457,8 @@
             verticalOffset: -10,
             horizontalOffset: 0,
             sizeScale: 2.0,
-            selectedStyle: '1'
+            rotationAngle: 0,
+            selectedStyle: 'Drunk In Love'
         };
         
         // DOM Elements
@@ -449,12 +492,16 @@
         const smallerBtn = document.getElementById('smallerBtn');
         const largerBtn = document.getElementById('largerBtn');
         const sizeSlider = document.getElementById('sizeSlider');
+        const rotateLeftBtn = document.getElementById('rotateLeftBtn');
+        const rotateRightBtn = document.getElementById('rotateRightBtn');
         
         // Display elements
         const verticalValue = document.getElementById('verticalValue');
         const horizontalValue = document.getElementById('horizontalValue');
         const scaleValue = document.getElementById('scaleValue');
         const sizeValue = document.getElementById('sizeValue');
+        const rotationValue = document.getElementById('rotationValue');
+        const rotationDisplayValue = document.getElementById('rotationDisplayValue');
         
         // Tab elements
         const tabs = document.querySelectorAll('.tab');
@@ -505,6 +552,10 @@
         smallerBtn.addEventListener('click', () => adjustSize('smaller'));
         largerBtn.addEventListener('click', () => adjustSize('larger'));
         sizeSlider.addEventListener('input', handleSizeSlider);
+        
+        // Rotation controls
+        rotateLeftBtn.addEventListener('click', () => adjustRotation('left'));
+        rotateRightBtn.addEventListener('click', () => adjustRotation('right'));
         
         // Functions
         function handleImageUpload(event) {
@@ -573,11 +624,22 @@
             updateDisplay();
         }
         
+        function adjustRotation(direction) {
+            if (direction === 'left') {
+                currentSettings.rotationAngle = Math.max(-45, currentSettings.rotationAngle - 5);
+            } else {
+                currentSettings.rotationAngle = Math.min(45, currentSettings.rotationAngle + 5);
+            }
+            updateDisplay();
+        }
+        
         function updateDisplay() {
             verticalValue.textContent = currentSettings.verticalOffset;
             horizontalValue.textContent = currentSettings.horizontalOffset;
             scaleValue.textContent = currentSettings.sizeScale.toFixed(1);
             sizeValue.textContent = sizeSlider.value + '%';
+            rotationValue.textContent = currentSettings.rotationAngle + '°';
+            rotationDisplayValue.textContent = currentSettings.rotationAngle;
         }
         
         async function applyEyelashes() {
@@ -597,7 +659,8 @@
                 formData.append('vertical_offset', currentSettings.verticalOffset);
                 formData.append('horizontal_offset', currentSettings.horizontalOffset);
                 formData.append('size_scale', currentSettings.sizeScale);
-                formData.append('height_scale', 1.0); // Fixed for simplicity
+                formData.append('height_scale', 1.0);
+                formData.append('rotation_angle', currentSettings.rotationAngle);
                 
                 const response = await fetch(`${API_BASE_URL}/upload`, {
                     method: 'POST',
@@ -739,7 +802,8 @@
                 verticalOffset: -10,
                 horizontalOffset: 0,
                 sizeScale: 2.0,
-                selectedStyle: '1'
+                rotationAngle: 0,
+                selectedStyle: 'Drunk In Love'
             };
             
             sizeSlider.value = 100;
@@ -748,7 +812,7 @@
             
             // Reset style buttons
             styleBtns.forEach(btn => btn.classList.remove('active'));
-            document.querySelector('.style-btn[data-style="1"]').classList.add('active');
+            document.querySelector('.style-btn[data-style="Drunk In Love"]').classList.add('active');
         }
         
         function downloadImage() {
