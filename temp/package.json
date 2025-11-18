@@ -1,0 +1,11 @@
+{
+  "name": "eyelash-try-on",
+  "version": "1.0.0",
+  "description": "Frontend eyelash try-on and recommendation system",
+  "scripts": {
+    "build": "mkdir -p public && cp index.html public/ && cp eyelash-system.js public/ && mkdir -p public/eyelashes"
+  },
+  "devDependencies": {
+    "@vercel/static-build": "^1.0.0"
+  }
+}
