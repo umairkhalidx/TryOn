@@ -3,6 +3,7 @@ from flask_cors import CORS
 import cv2
 import mediapipe as mp
 import numpy as np
+import math
 import io
 from typing import Dict, List, Tuple
 
@@ -33,304 +34,390 @@ EYELASH_NAMES = {
     "Iconic": "Iconic"
 }
 
-# ---------- EYELASH RECOMMENDATION SYSTEM ----------
-class EyelashRecommender:
+# ---------- NEW EYELASH RECOMMENDATION SYSTEM ----------
+class EyelashRecommendationSystem:
     def __init__(self):
-        # Eyelash database with detailed attributes
-        self.eyelashes = {
-            "Drunk in Love": {
-                "style": "cat_eye",
-                "intensity": "medium",
-                "eye_sizes": ["small", "hooded_small"],
-                "look": "glam",
-                "description": "Proper Cat eye lash style, medium (not natural not too heavy) perfect for small hooded eyes if they want a glam look.",
-                "image_id": "1"
+        self.mp_face_mesh = mp.solutions.face_mesh
+        
+        # Eye landmarks indices
+        self.RIGHT_EYE = [33, 133, 160, 159, 158, 157, 173, 155, 154, 153, 145, 144, 163, 7]
+        self.LEFT_EYE = [263, 362, 387, 386, 385, 384, 398, 382, 381, 380, 374, 373, 390, 249]
+        
+        # Key points for measurements
+        self.RIGHT_EYE_INNER = 133
+        self.RIGHT_EYE_OUTER = 33
+        self.LEFT_EYE_INNER = 362
+        self.LEFT_EYE_OUTER = 263
+        
+        # Inventory with detailed specifications
+        self.inventory = {
+            "Cat Eye Styles": {
+                "Foxy": {
+                    "suitable_sizes": ["Small", "Medium", "Large"],
+                    "suitable_shapes": ["Almond", "Round", "Upturned"],
+                    "style_type": "Elongating & Dramatic",
+                    "description": "Perfect cat eye with outer corner emphasis",
+                    "intensity": "Medium",
+                    "look": "Soft Glam"
+                },
+                "Drunk In Love": {
+                    "suitable_sizes": ["Small", "Medium"],
+                    "suitable_shapes": ["Almond", "Round", "Upturned", "Downturned"],
+                    "style_type": "Subtle Cat Eye",
+                    "description": "Soft cat eye effect for everyday glamour",
+                    "intensity": "Medium",
+                    "look": "Glam"
+                },
+                "Other Half 2": {
+                    "suitable_sizes": ["Small"],
+                    "suitable_shapes": ["Almond", "Round", "Upturned", "Hooded"],
+                    "style_type": "Delicate Cat Eye",
+                    "description": "Lightweight cat eye for smaller eyes",
+                    "intensity": "Medium",
+                    "look": "Lifted"
+                },
+                "Vixen": {
+                    "suitable_sizes": ["Large"],
+                    "suitable_shapes": ["Almond", "Round", "Upturned"],
+                    "style_type": "Bold Cat Eye",
+                    "description": "Dramatic cat eye for larger eyes",
+                    "intensity": "Heavy",
+                    "look": "Dramatic"
+                }
             },
-            "Flare": {
-                "style": "doll_eye",
-                "intensity": "natural",
-                "eye_sizes": ["small", "hooded_small"],
-                "look": "natural",
-                "description": "Natural doll eye, designed for small hooded eyes. For natural looks.",
-                "image_id": "2"
+            "Doll Eye Styles": {
+                "Iconic": {
+                    "suitable_sizes": ["Small", "Medium", "Large"],
+                    "suitable_shapes": ["Round", "Almond", "Upturned", "Downturned", "Hooded"],
+                    "style_type": "Universal Doll Eye",
+                    "description": "Classic doll eye - works for everyone",
+                    "intensity": "Medium-Heavy",
+                    "look": "Versatile"
+                },
+                "Wedding Day": {
+                    "suitable_sizes": ["Small", "Medium"],
+                    "suitable_shapes": ["Round", "Almond", "Upturned", "Downturned", "Hooded"],
+                    "style_type": "Romantic Doll Eye",
+                    "description": "Soft, romantic doll effect",
+                    "intensity": "Medium",
+                    "look": "Versatile"
+                },
+                "Staycation": {
+                    "suitable_sizes": ["Large"],
+                    "suitable_shapes": ["Round", "Almond", "Upturned"],
+                    "style_type": "Voluminous Doll Eye",
+                    "description": "Full, dramatic doll eye for larger eyes",
+                    "intensity": "Heavy",
+                    "look": "Dramatic"
+                }
             },
-            "Foxy": {
-                "style": "slight_cat_eye",
-                "intensity": "medium",
-                "eye_sizes": ["medium", "big"],
-                "look": "soft_glam",
-                "description": "Slight Cat eye, medium, super wispy gives a soft cat eye look without looking too heavy. Perfect for medium to big eyes.",
-                "image_id": "3"
-            },
-            "Iconic": {
-                "style": "slight_cat_eye",
-                "intensity": "medium_heavy",
-                "eye_sizes": ["small", "medium", "big", "hooded_small", "hooded_medium"],
-                "look": "versatile",
-                "description": "Slight cat eye, medium-heavy, wispy lash style, suitable for all eye shapes.",
-                "image_id": "4"
-            },
-            "Other Half 1": {
-                "style": "half_lash_natural",
-                "intensity": "natural",
-                "eye_sizes": ["small", "medium", "big", "hooded_small", "hooded_medium"],
-                "look": "natural",
-                "description": "Most natural, half lash style, applied at the end (corner) of the eye to give cat eye look but very soft. Perfect for hooded eyes too.",
-                "image_id": "5"
-            },
-            "Other Half 2": {
-                "style": "half_lash_cat",
-                "intensity": "medium",
-                "eye_sizes": ["small", "medium", "big", "hooded_small", "hooded_medium"],
-                "look": "lifted",
-                "description": "Cat eye, medium, half lash, apply at the corner of the eye to give cat eye lifted look. Best for hooded eyes too.",
-                "image_id": "6"
-            },
-            "Staycation": {
-                "style": "doll_eye",
-                "intensity": "heavy",
-                "eye_sizes": ["medium", "big"],
-                "look": "dramatic",
-                "description": "Heavy, doll eye, super fluffy and thick, best suitable for medium to big eyes. Not good for hooded eyes.",
-                "image_id": "7"
-            },
-            "Vixen": {
-                "style": "cat_eye",
-                "intensity": "heavy",
-                "eye_sizes": ["big", "hooded_medium"],
-                "look": "dramatic",
-                "description": "Heavy, cat eye, best for big eyes or medium hooded eyes.",
-                "image_id": "8"
-            },
-            "Wedding Day": {
-                "style": "doll_eye",
-                "intensity": "medium",
-                "eye_sizes": ["small", "medium", "big", "hooded_small", "hooded_medium"],
-                "look": "versatile",
-                "description": "Doll eye, medium, suitable for all eye shapes and sizes.",
-                "image_id": "9"
+            "Natural Styles": {
+                "Flare": {
+                    "suitable_sizes": ["Small", "Medium"],
+                    "suitable_shapes": ["Almond", "Upturned", "Downturned", "Round"],
+                    "style_type": "Natural with Subtle Flare",
+                    "description": "Natural look with gentle outer corner lift",
+                    "intensity": "Natural",
+                    "look": "Natural"
+                },
+                "Other Half 1": {
+                    "suitable_sizes": ["Small"],
+                    "suitable_shapes": ["Hooded"],
+                    "style_type": "Natural for Hooded Eyes",
+                    "description": "Specially designed for small hooded eyes",
+                    "intensity": "Natural",
+                    "look": "Natural"
+                }
             }
         }
         
-        # Key landmarks for eye analysis
-        self.LEFT_EYE_INDICES = [33, 133, 160, 159, 158, 157, 173, 246]
-        self.RIGHT_EYE_INDICES = [362, 263, 387, 386, 385, 384, 398, 466]
-        self.LEFT_EYE_UPPER = [159, 158, 157, 173]
-        self.LEFT_EYE_LOWER = [144, 145, 153, 154]
-        self.RIGHT_EYE_UPPER = [386, 385, 384, 398]
-        self.RIGHT_EYE_LOWER = [373, 374, 380, 381]
-        
-        # Eyelid landmarks for hood detection
-        self.LEFT_UPPER_EYELID = [246, 161, 160, 159, 158, 157, 173, 133]
-        self.LEFT_EYEBROW = [70, 63, 105, 66, 107, 55, 65]
-        self.RIGHT_UPPER_EYELID = [466, 388, 387, 386, 385, 384, 398, 362]
-        self.RIGHT_EYEBROW = [300, 293, 334, 296, 336, 285, 295]
-
-    def get_euclidean_distance(self, point1: np.ndarray, point2: np.ndarray) -> float:
-        """Calculate Euclidean distance between two points."""
-        return np.linalg.norm(point1 - point2)
-
-    def analyze_eye_characteristics(self, landmarks, img_width: int, img_height: int) -> Dict:
-        """Analyze eye size, aspect ratio, and hooded characteristics."""
+    def calculate_distance(self, point1, point2):
+        """Calculate Euclidean distance between two points"""
+        return math.sqrt((point1[0] - point2[0])**2 + (point1[1] - point2[1])**2)
+    
+    def get_eye_measurements(self, landmarks, img_width, img_height):
+        """Extract all eye measurements"""
+        measurements = {}
         
         # Convert landmarks to pixel coordinates
-        left_eye_points = np.array([[landmarks[i].x * img_width, 
-                                     landmarks[i].y * img_height] 
-                                    for i in self.LEFT_EYE_INDICES])
-        right_eye_points = np.array([[landmarks[i].x * img_width, 
-                                      landmarks[i].y * img_height] 
-                                     for i in self.RIGHT_EYE_INDICES])
+        right_eye_inner = (landmarks[self.RIGHT_EYE_INNER].x * img_width, 
+                          landmarks[self.RIGHT_EYE_INNER].y * img_height)
+        right_eye_outer = (landmarks[self.RIGHT_EYE_OUTER].x * img_width,
+                          landmarks[self.RIGHT_EYE_OUTER].y * img_height)
+        left_eye_inner = (landmarks[self.LEFT_EYE_INNER].x * img_width,
+                         landmarks[self.LEFT_EYE_INNER].y * img_height)
+        left_eye_outer = (landmarks[self.LEFT_EYE_OUTER].x * img_width,
+                         landmarks[self.LEFT_EYE_OUTER].y * img_height)
         
-        # Calculate eye widths (horizontal distance)
-        left_eye_width = self.get_euclidean_distance(left_eye_points[0], left_eye_points[1])
-        right_eye_width = self.get_euclidean_distance(right_eye_points[0], right_eye_points[1])
-        avg_eye_width = (left_eye_width + right_eye_width) / 2
+        # Right eye measurements
+        right_eye_top = (landmarks[159].x * img_width, landmarks[159].y * img_height)
+        right_eye_bottom = (landmarks[145].x * img_width, landmarks[145].y * img_height)
+        right_eye_top2 = (landmarks[160].x * img_width, landmarks[160].y * img_height)
+        right_eye_bottom2 = (landmarks[144].x * img_width, landmarks[144].y * img_height)
         
-        # Calculate eye heights (vertical distance at center)
-        left_upper = np.array([landmarks[159].x * img_width, landmarks[159].y * img_height])
-        left_lower = np.array([landmarks[145].x * img_width, landmarks[145].y * img_height])
-        left_eye_height = self.get_euclidean_distance(left_upper, left_lower)
+        # Left eye measurements
+        left_eye_top = (landmarks[386].x * img_width, landmarks[386].y * img_height)
+        left_eye_bottom = (landmarks[374].x * img_width, landmarks[374].y * img_height)
+        left_eye_top2 = (landmarks[387].x * img_width, landmarks[387].y * img_height)
+        left_eye_bottom2 = (landmarks[373].x * img_width, landmarks[373].y * img_height)
         
-        right_upper = np.array([landmarks[386].x * img_width, landmarks[386].y * img_height])
-        right_lower = np.array([landmarks[374].x * img_width, landmarks[374].y * img_height])
-        right_eye_height = self.get_euclidean_distance(right_upper, right_lower)
+        # Calculate absolute measurements
+        right_eye_width = self.calculate_distance(right_eye_inner, right_eye_outer)
+        left_eye_width = self.calculate_distance(left_eye_inner, left_eye_outer)
         
-        avg_eye_height = (left_eye_height + right_eye_height) / 2
+        right_eye_height1 = self.calculate_distance(right_eye_top, right_eye_bottom)
+        right_eye_height2 = self.calculate_distance(right_eye_top2, right_eye_bottom2)
+        right_eye_height = (right_eye_height1 + right_eye_height2) / 2
         
-        # Calculate eye aspect ratio (width/height)
-        eye_aspect_ratio = avg_eye_width / avg_eye_height if avg_eye_height > 0 else 0
+        left_eye_height1 = self.calculate_distance(left_eye_top, left_eye_bottom)
+        left_eye_height2 = self.calculate_distance(left_eye_top2, left_eye_bottom2)
+        left_eye_height = (left_eye_height1 + left_eye_height2) / 2
         
-        # Calculate face width for normalization (distance between temples)
-        face_left = np.array([landmarks[234].x * img_width, landmarks[234].y * img_height])
-        face_right = np.array([landmarks[454].x * img_width, landmarks[454].y * img_height])
-        face_width = self.get_euclidean_distance(face_left, face_right)
+        # Inter-eye distance
+        inter_eye_distance = self.calculate_distance(right_eye_inner, left_eye_inner)
         
-        # Normalize eye width relative to face width
-        normalized_eye_width = avg_eye_width / face_width if face_width > 0 else 0
+        # Face width (for relative measurements)
+        face_left = (landmarks[234].x * img_width, landmarks[234].y * img_height)
+        face_right = (landmarks[454].x * img_width, landmarks[454].y * img_height)
+        face_width = self.calculate_distance(face_left, face_right)
         
-        # Check for hooded eyes
-        is_hooded = self.detect_hooded_eyes(landmarks, img_width, img_height)
+        # Calculate RELATIVE measurements (scale-invariant)
+        avg_eye_width = (right_eye_width + left_eye_width) / 2
         
-        # Determine eye size category based on normalized width and aspect ratio
-        eye_size = self.categorize_eye_size(normalized_eye_width, eye_aspect_ratio, is_hooded)
+        measurements['right_eye_width_relative'] = right_eye_width / face_width
+        measurements['left_eye_width_relative'] = left_eye_width / face_width
+        measurements['avg_eye_width_relative'] = avg_eye_width / face_width
+        
+        # Eye Aspect Ratio (height/width) - naturally relative
+        measurements['right_ear'] = right_eye_height / right_eye_width
+        measurements['left_ear'] = left_eye_height / left_eye_width
+        measurements['avg_ear'] = (measurements['right_ear'] + measurements['left_ear']) / 2
+        
+        # Inter-eye distance relative to eye width
+        measurements['inter_eye_ratio'] = inter_eye_distance / avg_eye_width
+        
+        # Calculate eye angles (upturned vs downturned)
+        right_angle = math.degrees(math.atan2(
+            right_eye_outer[1] - right_eye_inner[1],
+            right_eye_outer[0] - right_eye_inner[0]
+        ))
+        left_angle = math.degrees(math.atan2(
+            left_eye_inner[1] - left_eye_outer[1],
+            left_eye_inner[0] - left_eye_outer[0]
+        ))
+        
+        measurements['right_eye_angle'] = right_angle
+        measurements['left_eye_angle'] = left_angle
+        measurements['avg_eye_angle'] = (right_angle + left_angle) / 2
+        
+        # Eyelid visibility (hooded detection)
+        right_crease = (landmarks[157].x * img_width, landmarks[157].y * img_height)
+        left_crease = (landmarks[384].x * img_width, landmarks[384].y * img_height)
+        
+        right_lid_visibility = self.calculate_distance(right_crease, right_eye_top) / right_eye_height
+        left_lid_visibility = self.calculate_distance(left_crease, left_eye_top) / left_eye_height
+        
+        measurements['right_lid_visibility'] = right_lid_visibility
+        measurements['left_lid_visibility'] = left_lid_visibility
+        measurements['avg_lid_visibility'] = (right_lid_visibility + left_lid_visibility) / 2
+        
+        # Symmetry score
+        measurements['symmetry_score'] = 1 - abs(right_eye_width - left_eye_width) / avg_eye_width
+        
+        return measurements
+    
+    def classify_eye_shape(self, measurements):
+        """Classify eye shape based on measurements"""
+        ear = measurements['avg_ear']
+        angle = measurements['avg_eye_angle']
+        lid_visibility = measurements['avg_lid_visibility']
+        
+        # Eye shape classification
+        if lid_visibility < 0.3:
+            shape = "Hooded"
+        elif ear > 0.5:
+            shape = "Round"
+        elif ear < 0.35:
+            if angle > 2:
+                shape = "Upturned"
+            elif angle < -2:
+                shape = "Downturned"
+            else:
+                shape = "Almond"
+        else:
+            if angle > 3:
+                shape = "Upturned"
+            elif angle < -3:
+                shape = "Downturned"
+            else:
+                shape = "Almond"
+        
+        return shape
+    
+    def classify_eye_size(self, measurements):
+        """Classify eye size relative to face"""
+        eye_width_ratio = measurements['avg_eye_width_relative']
+        
+        if eye_width_ratio < 0.15:
+            return "Small"
+        elif eye_width_ratio > 0.18:
+            return "Large"
+        else:
+            return "Medium"
+    
+    def classify_eye_spacing(self, measurements):
+        """Classify eye spacing"""
+        inter_eye_ratio = measurements['inter_eye_ratio']
+        
+        if inter_eye_ratio < 0.95:
+            return "Close-set"
+        elif inter_eye_ratio > 1.15:
+            return "Wide-set"
+        else:
+            return "Average-set"
+    
+    def calculate_match_score(self, shape, size, spacing, product_details):
+        """Calculate how well a product matches the eye characteristics"""
+        score = 100
+        
+        # Perfect match for hooded eyes with specific products
+        if shape == "Hooded" and "Hooded" in product_details["suitable_shapes"]:
+            score += 50
+        
+        # Prioritize universal products
+        if len(product_details["suitable_sizes"]) == 3:  # Universal size
+            score += 10
+        if len(product_details["suitable_shapes"]) >= 4:  # Works with many shapes
+            score += 10
+        
+        # Cat eye styles work best for elongation
+        if shape in ["Round", "Downturned"] and "Cat Eye" in product_details["style_type"]:
+            score += 20
+        
+        # Doll eye styles work best for round enhancement
+        if shape in ["Almond", "Upturned"] and "Doll Eye" in product_details["style_type"]:
+            score += 15
+        
+        # Natural styles for subtle looks
+        if size == "Small" and "Natural" in product_details["style_type"]:
+            score += 15
+        
+        return score
+    
+    def recommend_eyelashes(self, shape, size, spacing):
+        """Recommend eyelashes based on eye classification from actual inventory"""
+        
+        # Find matching products
+        recommended_products = []
+        
+        for category, products in self.inventory.items():
+            for product_name, details in products.items():
+                # Check if product matches eye size and shape
+                size_match = size in details["suitable_sizes"]
+                shape_match = shape in details["suitable_shapes"]
+                
+                if size_match and shape_match:
+                    recommended_products.append({
+                        "name": product_name,
+                        "category": category,
+                        "style_type": details["style_type"],
+                        "description": details["description"],
+                        "intensity": details["intensity"],
+                        "look": details["look"],
+                        "match_score": self.calculate_match_score(shape, size, spacing, details)
+                    })
+        
+        # Sort by match score
+        recommended_products.sort(key=lambda x: x["match_score"], reverse=True)
+        
+        # Get top 3 recommendations
+        top_recommendations = recommended_products[:3] if len(recommended_products) >= 3 else recommended_products
+        
+        # Spacing-based application tips
+        spacing_tips = {
+            "Close-set": "Focus application on outer 2/3 of lash line to create width",
+            "Wide-set": "Focus application on inner 2/3 of lash line to bring eyes closer",
+            "Average-set": "Apply evenly across entire lash line for balanced look"
+        }
+        
+        # Shape-based tips
+        shape_tips = {
+            "Hooded": "Your hooded eyes look best with curled, wispy lashes that lift and open the eye. Avoid heavy styles.",
+            "Round": "Elongate your beautiful round eyes with cat-eye styles that emphasize the outer corners.",
+            "Almond": "Lucky you! Your almond eyes are versatile and can rock any lash style - go bold!",
+            "Downturned": "Lift your eye shape with curled lashes that have extra volume at the outer corners.",
+            "Upturned": "Balance your naturally lifted eyes with even length across the lash line."
+        }
         
         return {
-            "eye_width": float(avg_eye_width),
-            "eye_height": float(avg_eye_height),
-            "eye_aspect_ratio": float(eye_aspect_ratio),
-            "normalized_eye_width": float(normalized_eye_width),
-            "face_width": float(face_width),
-            "is_hooded": bool(is_hooded),
-            "eye_size": eye_size,
-            "eye_size_display": eye_size.replace('_', ' ').title()
+            "top_picks": top_recommendations,
+            "all_suitable": recommended_products,
+            "application_tip": spacing_tips.get(spacing, ""),
+            "shape_tip": shape_tips.get(shape, ""),
+            "total_matches": len(recommended_products)
         }
-
-    def detect_hooded_eyes(self, landmarks, img_width: int, img_height: int) -> bool:
-        """Detect if eyes are hooded by analyzing eyelid visibility."""
-        
-        # Analyze left eye
-        left_upper_lid = np.array([[landmarks[i].x * img_width, 
-                                    landmarks[i].y * img_height] 
-                                   for i in self.LEFT_UPPER_EYELID])
-        left_eyebrow = np.array([[landmarks[i].x * img_width, 
-                                  landmarks[i].y * img_height] 
-                                 for i in self.LEFT_EYEBROW])
-        
-        # Calculate vertical distances between eyelid and eyebrow
-        left_distances = []
-        for lid_point in left_upper_lid[1:-1]:  # Skip corner points
-            min_dist = min([self.get_euclidean_distance(lid_point, brow_point) 
-                           for brow_point in left_eyebrow])
-            left_distances.append(min_dist)
-        
-        # Analyze right eye
-        right_upper_lid = np.array([[landmarks[i].x * img_width, 
-                                     landmarks[i].y * img_height] 
-                                    for i in self.RIGHT_UPPER_EYELID])
-        right_eyebrow = np.array([[landmarks[i].x * img_width, 
-                                   landmarks[i].y * img_height] 
-                                  for i in self.RIGHT_EYEBROW])
-        
-        right_distances = []
-        for lid_point in right_upper_lid[1:-1]:
-            min_dist = min([self.get_euclidean_distance(lid_point, brow_point) 
-                           for brow_point in right_eyebrow])
-            right_distances.append(min_dist)
-        
-        # Calculate average eyelid-to-eyebrow distance
-        avg_distance = np.mean(left_distances + right_distances)
-        
-        # Calculate eye height for normalization
-        left_upper = np.array([landmarks[159].x * img_width, landmarks[159].y * img_height])
-        left_lower = np.array([landmarks[145].x * img_width, landmarks[145].y * img_height])
-        eye_height = self.get_euclidean_distance(left_upper, left_lower)
-        
-        # Normalized ratio
-        hood_ratio = avg_distance / eye_height if eye_height > 0 else 0
-        
-        # Threshold for hooded eyes
-        return hood_ratio < 2.5
-
-    def categorize_eye_size(self, normalized_width: float, aspect_ratio: float, is_hooded: bool) -> str:
-        """Categorize eye size into small, medium, or big, considering hooded eyes."""
-        
-        if is_hooded:
-            if normalized_width < 0.16:
-                return "hooded_small"
-            elif normalized_width < 0.185:
-                return "hooded_medium"
-            else:
-                return "hooded_medium"
-        else:
-            if normalized_width < 0.155:
-                return "small"
-            elif normalized_width < 0.18:
-                return "medium"
-            else:
-                return "big"
-
-    def recommend_eyelashes(self, eye_characteristics: Dict) -> List[Dict]:
-        """Recommend eyelashes based on eye characteristics with confidence scores."""
-        
-        recommendations = []
-        eye_size = eye_characteristics["eye_size"]
-        
-        for name, details in self.eyelashes.items():
-            # Check if this lash is suitable for the detected eye size
-            if eye_size in details["eye_sizes"]:
-                # Calculate confidence score based on various factors
-                confidence = 0.8  # Base confidence
-                
-                # Boost confidence for exact matches
-                if len(details["eye_sizes"]) <= 3:  # More specific lashes
-                    confidence += 0.1
-                
-                # Boost for versatile options
-                if "versatile" in details["look"]:
-                    confidence += 0.05
-                
-                recommendations.append({
-                    "name": name,
-                    "style": details["style"].replace('_', ' ').title(),
-                    "intensity": details["intensity"].replace('_', ' ').title(),
-                    "look": details["look"].replace('_', ' ').title(),
-                    "description": details["description"],
-                    "confidence": round(confidence * 100, 0),
-                    "image_id": details["image_id"]
-                })
-        
-        # Sort by confidence
-        recommendations.sort(key=lambda x: x["confidence"], reverse=True)
-        
-        return recommendations
-
-    def process_image(self, image_bytes) -> Dict:
-        """Process an image and return recommendations."""
-        
+    
+    def analyze_and_recommend(self, image_bytes):
+        """Main function to analyze image and provide recommendations"""
         # Decode image
         file_bytes = np.frombuffer(image_bytes, np.uint8)
-        img = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
+        image = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
         
-        if img is None:
-            raise ValueError("Could not read image")
+        if image is None:
+            raise ValueError("Could not load image")
         
-        img_height, img_width, _ = img.shape
+        img_height, img_width = image.shape[:2]
+        rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         
-        # Convert to RGB for MediaPipe
-        image_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        
-        # Process with Face Mesh
-        with mp_face_mesh.FaceMesh(
+        # Process with MediaPipe
+        with self.mp_face_mesh.FaceMesh(
             static_image_mode=True,
             max_num_faces=1,
             refine_landmarks=True,
             min_detection_confidence=0.5
         ) as face_mesh:
-            results = face_mesh.process(image_rgb)
+            results = face_mesh.process(rgb_image)
             
             if not results.multi_face_landmarks:
-                raise ValueError("No face detected in the image")
+                raise ValueError("No face detected in image")
             
             landmarks = results.multi_face_landmarks[0].landmark
             
-            # Analyze eye characteristics
-            eye_chars = self.analyze_eye_characteristics(landmarks, img_width, img_height)
+            # Get measurements
+            measurements = self.get_eye_measurements(landmarks, img_width, img_height)
+            
+            # Classify eyes
+            eye_shape = self.classify_eye_shape(measurements)
+            eye_size = self.classify_eye_size(measurements)
+            eye_spacing = self.classify_eye_spacing(measurements)
             
             # Get recommendations
-            recommendations = self.recommend_eyelashes(eye_chars)
+            recommendations = self.recommend_eyelashes(eye_shape, eye_size, eye_spacing)
             
+            # Compile results
             return {
-                "eye_characteristics": eye_chars,
-                "recommendations": recommendations,
-                "total_recommendations": len(recommendations)
+                "classification": {
+                    "eye_shape": eye_shape,
+                    "eye_size": eye_size,
+                    "eye_spacing": eye_spacing
+                },
+                "measurements": {
+                    "eye_aspect_ratio": round(measurements['avg_ear'], 3),
+                    "eye_angle": round(measurements['avg_eye_angle'], 2),
+                    "lid_visibility": round(measurements['avg_lid_visibility'], 3),
+                    "inter_eye_ratio": round(measurements['inter_eye_ratio'], 3),
+                    "eye_width_to_face_ratio": round(measurements['avg_eye_width_relative'], 3),
+                    "symmetry_score": round(measurements['symmetry_score'], 3)
+                },
+                "recommendations": recommendations
             }
 
 
-# Initialize recommender globally
-recommender = EyelashRecommender()
+# Initialize the new recommender globally
+recommender = EyelashRecommendationSystem()
 
 
-# ---------- HELPER FUNCTIONS FOR TRY-ON ----------
+# ---------- HELPER FUNCTIONS FOR TRY-ON (UNCHANGED) ----------
 def rotate_image(image, angle):
     """Rotate image around its center"""
     if angle == 0:
@@ -371,7 +458,6 @@ def overlay_transparent_png(background, overlay_img, x, y, width, height, rotati
         overlay_resized = rotate_image(overlay_resized, rotation_angle)
         
         # Calculate the center offset caused by rotation
-        # The original center should remain at (x + width//2, y + height//2)
         new_height, new_width = overlay_resized.shape[:2]
         
         # Adjust position to keep the CENTER of the rotated image at the same location
@@ -611,20 +697,31 @@ def recommend_eyelashes():
     image_file = request.files['image']
     
     try:
-        # Process image and get recommendations
-        result = recommender.process_image(image_file.read())
+        # Process image and get recommendations using NEW system
+        result = recommender.analyze_and_recommend(image_file.read())
         
         return jsonify({
             "success": True,
             "analysis": {
-                "eye_size": result["eye_characteristics"]["eye_size_display"],
-                "is_hooded": result["eye_characteristics"]["is_hooded"],
-                "eye_width": round(result["eye_characteristics"]["eye_width"], 2),
-                "eye_height": round(result["eye_characteristics"]["eye_height"], 2),
-                "aspect_ratio": round(result["eye_characteristics"]["eye_aspect_ratio"], 2)
+                "eye_shape": result["classification"]["eye_shape"],
+                "eye_size": result["classification"]["eye_size"],
+                "eye_spacing": result["classification"]["eye_spacing"],
+                "measurements": {
+                    "eye_aspect_ratio": result["measurements"]["eye_aspect_ratio"],
+                    "eye_angle": result["measurements"]["eye_angle"],
+                    "lid_visibility": result["measurements"]["lid_visibility"],
+                    "inter_eye_ratio": result["measurements"]["inter_eye_ratio"],
+                    "eye_width_to_face_ratio": result["measurements"]["eye_width_to_face_ratio"],
+                    "symmetry_score": result["measurements"]["symmetry_score"]
+                }
             },
-            "recommendations": result["recommendations"],
-            "total_recommendations": result["total_recommendations"]
+            "recommendations": {
+                "top_picks": result["recommendations"]["top_picks"],
+                "all_suitable": result["recommendations"]["all_suitable"],
+                "total_matches": result["recommendations"]["total_matches"],
+                "application_tip": result["recommendations"]["application_tip"],
+                "shape_tip": result["recommendations"]["shape_tip"]
+            }
         })
         
     except ValueError as e:
@@ -656,18 +753,21 @@ def get_default_settings():
 
 @app.route('/eyelashes', methods=['GET'])
 def get_eyelashes():
-    """Get information about all available eyelashes"""
+    """Get information about all available eyelashes from inventory"""
     eyelashes_info = []
-    for name, details in recommender.eyelashes.items():
-        eyelashes_info.append({
-            "name": name,
-            "style": details["style"].replace('_', ' ').title(),
-            "intensity": details["intensity"].replace('_', ' ').title(),
-            "look": details["look"].replace('_', ' ').title(),
-            "description": details["description"],
-            "image_id": details["image_id"],
-            "suitable_for": [size.replace('_', ' ').title() for size in details["eye_sizes"]]
-        })
+    
+    for category, products in recommender.inventory.items():
+        for name, details in products.items():
+            eyelashes_info.append({
+                "name": name,
+                "category": category,
+                "style": details["style_type"],
+                "intensity": details["intensity"],
+                "look": details["look"],
+                "description": details["description"],
+                "suitable_sizes": details["suitable_sizes"],
+                "suitable_shapes": details["suitable_shapes"]
+            })
     
     return jsonify({
         "success": True,
